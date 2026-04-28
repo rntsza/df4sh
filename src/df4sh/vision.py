@@ -63,11 +63,15 @@ _TEMPLATE_MULTISCALE_SCALES = (
 )
 
 
+_TEMPLATE_MULTISCALE_SCALES_EP2_FAST = _TEMPLATE_MULTISCALE_SCALES[::2]
+
+
 def _run_match_gray_multiscale(
     frame: np.ndarray,
     template_bgr: np.ndarray,
     threshold: float,
     roi: dict[str, Any] | None,
+    scale_steps: tuple[float, ...] | None = None,
 ) -> tuple[bool, float, int, int, int, int]:
     search, x0, y0 = _search_plane(frame, roi)
     s_gray = cv2.cvtColor(search, cv2.COLOR_BGR2GRAY)
@@ -79,7 +83,8 @@ def _run_match_gray_multiscale(
     best_my = 0
     best_tw = 0
     best_th = 0
-    for scale in _TEMPLATE_MULTISCALE_SCALES:
+    steps = _TEMPLATE_MULTISCALE_SCALES if scale_steps is None else scale_steps
+    for scale in steps:
         tw = max(4, int(round(tw0 * scale)))
         th = max(4, int(round(th0 * scale)))
         if tw > sw or th > sh:
@@ -150,8 +155,11 @@ def match_epesca2(
     vision = cfg["vision"]
     use_multiscale = bool(vision.get("epesca2_multiscale", True))
     if use_multiscale:
+        scales: tuple[float, ...] | None = None
+        if bool(vision.get("epesca2_multiscale_fast", False)):
+            scales = _TEMPLATE_MULTISCALE_SCALES_EP2_FAST
         a, b, c, d, _e, _f = _run_match_gray_multiscale(
-            frame, template, thr, roi
+            frame, template, thr, roi, scales
         )
         return (a, b, c, d)
     a, b, c, d, _e, _f = _run_match(frame, template, thr, roi)

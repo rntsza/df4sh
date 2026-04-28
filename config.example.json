@@ -6,20 +6,21 @@
   },
   "templates": {
     "epesca1_path": "fish1E.png",
-    "epesca2_path": "EPesca2.png"
+    "epesca2_path": "fishcatch1.png"
   },
   "vision": {
     "match_threshold_epesca1": 0.52,
     "match_threshold_epesca2": 0.52,
     "epesca1_multiscale": true,
     "epesca2_multiscale": true,
+    "epesca2_multiscale_fast": false,
     "epesca1_search_roi": null,
     "epesca2_search_roi": null
   },
   "timing": {
     "delay_after_menu_ms": 500,
     "poll_interval_ms": 100,
-    "poll_interval_epesca2_ms": 16,
+    "poll_interval_epesca2_ms": 0,
     "after_select_fishing_ms": 200
   },
   "automation": {
@@ -40,6 +41,6 @@
   },
   "capture": {
     "target_fps": 30,
-    "epesca2_target_fps": 60
+    "epesca2_target_fps": null
   }
 }

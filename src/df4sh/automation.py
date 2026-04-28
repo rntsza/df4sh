@@ -45,9 +45,14 @@ def run_fishing_loop(
         )
         / 1000.0
     )
-    target_fps_ep2 = int(
-        capture.get("epesca2_target_fps", capture["target_fps"])
-    )
+    if "epesca2_target_fps" in capture:
+        raw_ep2_fps = capture["epesca2_target_fps"]
+    else:
+        raw_ep2_fps = capture["target_fps"]
+    if raw_ep2_fps is None:
+        ep2_fps_cap = None
+    else:
+        ep2_fps_cap = int(raw_ep2_fps)
     key_menu = cfg["keys"]["open_menu"].strip()
     key_hook = cfg["keys"]["hook"].strip()
     sel_raw = cfg["keys"].get("select_fishing", "")
@@ -120,10 +125,6 @@ def run_fishing_loop(
             t0 = time.perf_counter()
             frame = grab_bgr_frame(region)
             s2 = match_epesca2(frame, cfg, repo_root)
-            print(
-                f"state=wait_epesca2 matched={s2[0]} score={s2[1]:.4f}",
-                flush=True,
-            )
             if s2[0]:
                 if hook_refocus:
                     focus_target_window(hwnd)
@@ -131,6 +132,10 @@ def run_fishing_loop(
                     time.sleep(hook_latency_s)
                 tap_unicode_key(key_hook)
                 hook_sent = True
+                print(
+                    f"state=wait_epesca2 matched=True score={s2[1]:.4f}",
+                    flush=True,
+                )
                 if s1_snap is not None:
                     print(
                         f"state=hook sent score_epesca2={s2[1]:.4f} "
@@ -143,9 +148,19 @@ def run_fishing_loop(
                         flush=True,
                     )
                 break
+            print(
+                f"state=wait_epesca2 matched=False score={s2[1]:.4f}",
+                flush=True,
+            )
             t1 = time.perf_counter()
             elapsed = t1 - t0
-            need = max((1.0 / float(target_fps_ep2)) - elapsed, poll_ep2_s)
+            if ep2_fps_cap is None:
+                need = poll_ep2_s
+            else:
+                need = max(
+                    (1.0 / float(ep2_fps_cap)) - elapsed,
+                    poll_ep2_s,
+                )
             if need > 0 and _wait(stop_event, need):
                 return
 

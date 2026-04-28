@@ -41,6 +41,7 @@ def test_phase2_config_defaults_parse(tmp_path: Path) -> None:
     cfg = load_app_config(tmp_path)
     assert cfg["process"]["exe_name"] == "Diablo IV.exe"
     assert cfg["capture"]["target_fps"] == 30
+    assert cfg["capture"]["epesca2_target_fps"] is None
 
 
 def test_capture_target_fps_out_of_range(tmp_path: Path) -> None:

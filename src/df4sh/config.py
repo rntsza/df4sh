@@ -198,6 +198,10 @@ def load_app_config(repo_root: Path | None = None) -> dict[str, Any]:
         e1m = vision["epesca1_multiscale"]
         if not isinstance(e1m, bool):
             raise ValueError("vision.epesca1_multiscale must be a boolean")
+    if "epesca2_multiscale_fast" in vision:
+        e2f = vision["epesca2_multiscale_fast"]
+        if not isinstance(e2f, bool):
+            raise ValueError("vision.epesca2_multiscale_fast must be a boolean")
     if "epesca2_multiscale" in vision:
         em = vision["epesca2_multiscale"]
         if not isinstance(em, bool):
@@ -241,10 +245,12 @@ def load_app_config(repo_root: Path | None = None) -> dict[str, Any]:
         raise ValueError("capture.target_fps must be an integer between 1 and 60")
     if "epesca2_target_fps" in capture:
         tf2 = capture["epesca2_target_fps"]
-        if not isinstance(tf2, int) or not (1 <= tf2 <= 60):
-            raise ValueError(
-                "capture.epesca2_target_fps must be an integer between 1 and 60"
-            )
+        if tf2 is not None:
+            if not isinstance(tf2, int) or not (1 <= tf2 <= 120):
+                raise ValueError(
+                    "capture.epesca2_target_fps must be null or an integer "
+                    "between 1 and 120"
+                )
     if not isinstance(automation["mouse_click_epesca1_center"], bool):
         raise ValueError("automation.mouse_click_epesca1_center must be a boolean")
     aec = automation["after_epesca1_click_ms"]
