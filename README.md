@@ -1,0 +1,64 @@
+# df4sh
+
+Desktop helper (work in progress) for automating the Diablo IV fishing loop on Windows using screen capture and OpenCV-based template matching.
+
+## Requirements
+
+- Python 3.11 or newer
+- Windows is the target platform for the finished application
+
+## Setup
+
+```text
+python -m venv .venv
+.venv\Scripts\activate
+pip install -e ".[dev]"
+```
+
+## Configuration
+
+- `config.example.json` in the repository root holds the default settings. If `.config` is absent, the app loads this file as the effective configuration.
+- Optional: create `.config` in the repository root with the same JSON shape to override defaults. The `.config` file is gitignored.
+- When the package is installed globally (`site-packages`), run `python -m df4sh` from the repository directory so discovery walks upward from the current working directory and finds `config.example.json`. Alternatively set `DF4SH_REPO_ROOT` to that directory. For development, run `pip install -e .` from the clone so imports use this repository (if you previously ran `pip install .` without `-e`, run `pip install -e .` again to replace the fixed copy under `site-packages`).
+
+## Run
+
+```text
+python -m df4sh
+```
+
+Run tests:
+
+```text
+pytest tests/
+```
+
+## Phase 2 behavior
+
+- Window attachment runs only on Windows (`sys.platform == "win32"`). On other platforms, `resolve_target_hwnd` raises `RuntimeError` mentioning `win32`.
+- Default process executable name is `Diablo IV.exe` (`process.exe_name`). The app resolves visible top-level windows whose process matches that name, optionally filtered by `window.title_contains` (substring, case-insensitive).
+- When resolution is ambiguous or no window matches, a **tkinter** list picker asks the user to choose a window. If `attach.remember_choice` is true, the chosen title is merged into `.config` under `attach.last_window_title` via `save_config_patch`.
+- Screen capture uses **mss** over the full **outer** window rectangle mapped to an MSS region; frames are BGR `uint8` arrays shaped `(H, W, 3)` for OpenCV-style consumers.
+- **`capture.target_fps`** limits the intended capture loop rate: integer from **1** to **60**, default **30**. Use `throttle_sleep` after each grab when implementing a loop.
+- Runtime dependencies include **pywin32** (window enumeration and geometry), **mss**, **numpy**, and **psutil** (process listing by executable name).
+
+## Phase 3 behavior
+
+- Template paths `templates.epesca1_path` / `templates.epesca2_path` are resolved relative to the repository root. Images are loaded with OpenCV (`cv2.IMREAD_COLOR`, **BGR** `uint8`) and cached in memory for the process lifetime.
+- Matching uses grayscale **multi-scale** `matchTemplate` (**`TM_CCOEFF_NORMED`**) for **`match_epesca1`** and **`match_epesca2`** when **`vision.epesca1_multiscale`** / **`vision.epesca2_multiscale`** are **true** (defaults). Set either to **false** to use single-scale BGR on that template only. Scores are compared to **`vision.match_threshold_epesca1`** and **`vision.match_threshold_epesca2`**.
+- **`match_epesca1`** returns six values internally (**`matched`**, **`score`**, **`x`**, **`y`**, **`tw`**, **`th`**): **`tw`/`th`** are the winning scaled template size in pixels (used for the radial-menu click center). **`python -m df4sh probe`** prints them as **`tw=`** / **`th=`**. **`match_epesca2`** still reports four values to stdout in **`run`** logs.
+- Optional **`vision.epesca1_search_roi`** / **`vision.epesca2_search_roi`**: each is `null` or an object with **`x`**, **`y`**, **`width`**, **`height`** in **normalized 0..1** coordinates relative to the frame (`null` = search the full frame). Best-match **`x`,`y`** printed by the CLI are the top-left of the template in **full-frame** coordinates.
+- Dependency: **`opencv-python-headless`** (no OpenCV GUI required). Automated vision tests are optional in this phase; use **`python -m df4sh`** for a smoke run when template PNGs are present.
+
+## Phase 4 behavior
+
+- **`python -m df4sh`** (no subcommand) and **`python -m df4sh probe`** run the same **one-shot** check: attach, one frame, template scores (unchanged from earlier phases).
+- **`python -m df4sh run`** starts the **fishing loop** on Windows: focus target HWND (`SetForegroundWindow` + optional `AttachThreadInput`), send **`keys.open_menu`** and **`keys.hook`** via **`SendInput`** using **hardware scan codes** derived from `VkKeyScan` / `MapVirtualKey` (`KEYEVENTF_SCANCODE` — many games ignore `KEYEVENTF_UNICODE`); a short settle delay runs after focus before each tap.
+- **Radial / menu:** optional **`keys.select_fishing`** (one character or empty): if set, that key is sent after **`timing.delay_after_menu_ms`** (e.g. a confirm key). **`timing.after_select_fishing_ms`** waits before vision polling.
+- **Choosing fishing in the wheel:** when **`match_epesca1`** first succeeds, if **`automation.mouse_click_epesca1_center`** is **true** (default), the tool performs a **left click** at the **center** of the matched template in **screen** coordinates (hook+fish icon crop, e.g. **`fish1E.png`**). Then **`automation.after_epesca1_click_ms`** delays before the **`wait_epesca2`** phase. Set **`mouse_click_epesca1_center`** to **false** if you rely only on keyboard.
+- Keys **`open_menu`**, optional **`select_fishing`**, and **`hook`** use the single-character rule (trimmed); **`hook`** remains required non-empty.
+- During **`wait_epesca2`**, the loop uses **`timing.poll_interval_epesca2_ms`** if set (else **`timing.poll_interval_ms`**) and **`capture.epesca2_target_fps`** if set (else **`capture.target_fps`**) so bite detection can poll faster than the radial phase without raising CPU use for **`wait_epesca1`**.
+- When **`match_epesca2`** succeeds, **`automation.hook_refocus`** (default **true**) controls **`SetForegroundWindow`** before **`keys.hook`**; set **`false`** only if the game already stays focused. **`automation.hook_reaction_ms`** (default **0** in the merged **`automation`** defaults) sleeps that many milliseconds after refocus before **`SendInput`**.
+- Default example uses **`templates.epesca1_path`:** `fish1E.png` and **`templates.epesca2_path`:** `EPesca2.png` (same bite UI as `fishcatch1.png`, larger native crop ~69×69 vs ~46×47); tune **`vision.match_threshold_epesca1`** and **`vision.match_threshold_epesca2`** (example **0.52** each). Hook key fires **inside** the `wait_epesca2` loop when the match passes.
+- Stdout logs include `state=wait_epesca1`, `state=click_epesca1`, `state=wait_epesca2`, and `state=hook sent`.
+

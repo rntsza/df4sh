@@ -1,0 +1,65 @@
+Metadata-Version: 2.4
+Name: df4sh
+Version: 0.1.0
+Summary: Windows desktop assistant for automating the Diablo IV fishing loop using screen capture and OpenCV.
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+Requires-Dist: pywin32>=306
+Requires-Dist: mss>=9.0
+Requires-Dist: numpy>=1.26
+Requires-Dist: psutil>=5.9
+Requires-Dist: opencv-python-headless>=4.8
+Provides-Extra: dev
+Requires-Dist: pytest>=8; extra == "dev"
+
+# df4sh
+
+Desktop helper (work in progress) for automating the Diablo IV fishing loop on Windows using screen capture and OpenCV-based template matching.
+
+## Requirements
+
+- Python 3.11 or newer
+- Windows is the target platform for the finished application
+
+## Setup
+
+```text
+python -m venv .venv
+.venv\Scripts\activate
+pip install -e ".[dev]"
+```
+
+## Configuration
+
+- `config.example.json` in the repository root holds the default settings. If `.config` is absent, the app loads this file as the effective configuration.
+- Optional: create `.config` in the repository root with the same JSON shape to override defaults. The `.config` file is gitignored.
+- When the package is installed globally (`site-packages`), run `python -m df4sh` from the repository directory so discovery walks upward from the current working directory and finds `config.example.json`. Alternatively set `DF4SH_REPO_ROOT` to that directory. For development, run `pip install -e .` from the clone so imports use this repository (if you previously ran `pip install .` without `-e`, run `pip install -e .` again to replace the fixed copy under `site-packages`).
+
+## Run
+
+```text
+python -m df4sh
+```
+
+Run tests:
+
+```text
+pytest tests/
+```
+
+## Phase 2 behavior
+
+- Window attachment runs only on Windows (`sys.platform == "win32"`). On other platforms, `resolve_target_hwnd` raises `RuntimeError` mentioning `win32`.
+- Default process executable name is `Diablo IV.exe` (`process.exe_name`). The app resolves visible top-level windows whose process matches that name, optionally filtered by `window.title_contains` (substring, case-insensitive).
+- When resolution is ambiguous or no window matches, a **tkinter** list picker asks the user to choose a window. If `attach.remember_choice` is true, the chosen title is merged into `.config` under `attach.last_window_title` via `save_config_patch`.
+- Screen capture uses **mss** over the full **outer** window rectangle mapped to an MSS region; frames are BGR `uint8` arrays shaped `(H, W, 3)` for OpenCV-style consumers.
+- **`capture.target_fps`** limits the intended capture loop rate: integer from **1** to **60**, default **30**. Use `throttle_sleep` after each grab when implementing a loop.
+- Runtime dependencies include **pywin32** (window enumeration and geometry), **mss**, **numpy**, and **psutil** (process listing by executable name).
+
+## Phase 3 behavior
+
+- Template paths `templates.epesca1_path` / `templates.epesca2_path` are resolved relative to the repository root. Images are loaded with OpenCV (`cv2.IMREAD_COLOR`, **BGR** `uint8`) and cached in memory for the process lifetime.
+- Matching uses **`cv2.matchTemplate`** with **`cv2.TM_CCOEFF_NORMED`**. Scores are compared to **`vision.match_threshold_epesca1`** and **`vision.match_threshold_epesca2`** (configurable).
+- Optional **`vision.epesca1_search_roi`** / **`vision.epesca2_search_roi`**: each is `null` or an object with **`x`**, **`y`**, **`width`**, **`height`** in **normalized 0..1** coordinates relative to the frame (`null` = search the full frame). Best-match **`x`,`y`** printed by the CLI are the top-left of the template in **full-frame** coordinates.
+- Dependency: **`opencv-python-headless`** (no OpenCV GUI required). Automated vision tests are optional in this phase; use **`python -m df4sh`** for a smoke run when template PNGs are present.
+

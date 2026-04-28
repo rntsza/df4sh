@@ -1,0 +1,8 @@
+pywin32>=306
+mss>=9.0
+numpy>=1.26
+psutil>=5.9
+opencv-python-headless>=4.8
+
+[dev]
+pytest>=8

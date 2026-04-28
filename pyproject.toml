@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "df4sh"
+version = "0.1.0"
+description = "Windows desktop assistant for automating the Diablo IV fishing loop using screen capture and OpenCV."
+requires-python = ">=3.11"
+readme = "README.md"
+dependencies = [
+    "pywin32>=306",
+    "mss>=9.0",
+    "numpy>=1.26",
+    "psutil>=5.9",
+    "opencv-python-headless>=4.8",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
