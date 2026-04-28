@@ -122,9 +122,9 @@ def save_config_patch(repo_root: Path | None, patch: dict[str, Any]) -> None:
         json.dump(current, f, indent=2)
 
 
-def load_app_config(repo_root: Path | None = None) -> dict[str, Any]:
-    data = load_raw_config(repo_root)
-    _merge_automation_defaults(data)
+def validate_config_dict(data: dict[str, Any]) -> dict[str, Any]:
+    cfg = deepcopy(data)
+    _merge_automation_defaults(cfg)
     for key in (
         "keys",
         "templates",
@@ -136,17 +136,17 @@ def load_app_config(repo_root: Path | None = None) -> dict[str, Any]:
         "capture",
         "automation",
     ):
-        if key not in data:
+        if key not in cfg:
             raise ValueError(f"missing config section: {key}")
-    keys = data["keys"]
-    templates = data["templates"]
-    vision = data["vision"]
-    timing = data["timing"]
-    process = data["process"]
-    window = data["window"]
-    attach = data["attach"]
-    capture = data["capture"]
-    automation = data["automation"]
+    keys = cfg["keys"]
+    templates = cfg["templates"]
+    vision = cfg["vision"]
+    timing = cfg["timing"]
+    process = cfg["process"]
+    window = cfg["window"]
+    attach = cfg["attach"]
+    capture = cfg["capture"]
+    automation = cfg["automation"]
     if not isinstance(keys, dict):
         raise ValueError("keys must be an object")
     if not isinstance(templates, dict):
@@ -261,4 +261,20 @@ def load_app_config(repo_root: Path | None = None) -> dict[str, Any]:
         raise ValueError("automation.hook_reaction_ms must be a non-negative integer")
     if not isinstance(automation["hook_refocus"], bool):
         raise ValueError("automation.hook_refocus must be a boolean")
-    return data
+    return cfg
+
+
+def load_app_config(repo_root: Path | None = None) -> dict[str, Any]:
+    data = load_raw_config(repo_root)
+    return validate_config_dict(data)
+
+
+def save_full_config(
+    repo_root: Path | None,
+    data: dict[str, Any],
+) -> None:
+    root = resolve_repo_root() if repo_root is None else repo_root
+    validated = validate_config_dict(data)
+    path = root / CONFIG_USER_NAME
+    with path.open("w", encoding="utf-8") as f:
+        json.dump(validated, f, indent=2)

@@ -9,6 +9,7 @@ from df4sh.attach import resolve_target_hwnd
 from df4sh.automation import run_fishing_loop
 from df4sh.capture import grab_bgr_frame
 from df4sh.config import load_app_config, resolve_repo_root
+from df4sh.desktop_ui import run_desktop_ui
 
 
 def _cmd_probe(repo: Path) -> None:
@@ -71,12 +72,20 @@ def _cmd_run(repo: Path) -> None:
         raise error_box[0]
 
 
+def _cmd_gui(repo: Path) -> None:
+    if sys.platform != "win32":
+        print("gui requires Windows", file=sys.stderr)
+        sys.exit(1)
+    run_desktop_ui(repo)
+
+
 def main() -> None:
     try:
         parser = argparse.ArgumentParser(prog="df4sh")
         sub = parser.add_subparsers(dest="cmd")
         sub.add_parser("probe")
         sub.add_parser("run")
+        sub.add_parser("gui")
         args = parser.parse_args()
         cmd = args.cmd if args.cmd else "probe"
         repo = resolve_repo_root()
@@ -84,6 +93,8 @@ def main() -> None:
             _cmd_probe(repo)
         elif cmd == "run":
             _cmd_run(repo)
+        elif cmd == "gui":
+            _cmd_gui(repo)
         else:
             parser.print_help()
             sys.exit(2)

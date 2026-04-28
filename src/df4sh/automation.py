@@ -3,6 +3,7 @@ from __future__ import annotations
 import sys
 import threading
 import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -16,11 +17,22 @@ def _wait(stop_event: threading.Event, seconds: float) -> bool:
     return stop_event.wait(timeout=seconds)
 
 
+def _emit_log(
+    sink: Callable[[str], None] | None,
+    message: str,
+) -> None:
+    if sink is None:
+        print(message, flush=True)
+    else:
+        sink(message)
+
+
 def run_fishing_loop(
     hwnd: int,
     cfg: dict[str, Any],
     repo_root: Path,
     stop_event: threading.Event,
+    log_line: Callable[[str], None] | None = None,
 ) -> None:
     if sys.platform != "win32":
         raise RuntimeError("run_fishing_loop requires win32")
@@ -88,9 +100,9 @@ def run_fishing_loop(
             t0 = time.perf_counter()
             frame = grab_bgr_frame(region)
             s1 = match_epesca1(frame, cfg, repo_root)
-            print(
+            _emit_log(
+                log_line,
                 f"state=wait_epesca1 matched={s1[0]} score={s1[1]:.4f}",
-                flush=True,
             )
             if s1[0]:
                 if click_epesca1:
@@ -102,9 +114,9 @@ def run_fishing_loop(
                     click_left_screen(cx, cy)
                     if _wait(stop_event, after_click_s):
                         return
-                    print(
+                    _emit_log(
+                        log_line,
                         f"state=click_epesca1 screen=({cx},{cy})",
-                        flush=True,
                     )
                 break
             t1 = time.perf_counter()
@@ -132,25 +144,25 @@ def run_fishing_loop(
                     time.sleep(hook_latency_s)
                 tap_unicode_key(key_hook)
                 hook_sent = True
-                print(
+                _emit_log(
+                    log_line,
                     f"state=wait_epesca2 matched=True score={s2[1]:.4f}",
-                    flush=True,
                 )
                 if s1_snap is not None:
-                    print(
+                    _emit_log(
+                        log_line,
                         f"state=hook sent score_epesca2={s2[1]:.4f} "
                         f"last_epesca1={s1_snap[1]:.4f}",
-                        flush=True,
                     )
                 else:
-                    print(
+                    _emit_log(
+                        log_line,
                         f"state=hook sent score_epesca2={s2[1]:.4f}",
-                        flush=True,
                     )
                 break
-            print(
+            _emit_log(
+                log_line,
                 f"state=wait_epesca2 matched=False score={s2[1]:.4f}",
-                flush=True,
             )
             t1 = time.perf_counter()
             elapsed = t1 - t0

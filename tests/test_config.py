@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from df4sh.config import load_app_config, save_config_patch
+from df4sh.config import load_app_config, save_config_patch, save_full_config, validate_config_dict
 
 
 def _repo_root() -> Path:
@@ -66,6 +66,24 @@ def test_save_config_patch_merges_attach(tmp_path: Path) -> None:
     loaded2 = json.loads((tmp_path / ".config").read_text(encoding="utf-8"))
     assert loaded2["attach"]["last_window_title"] == "SavedTitle"
     assert loaded2["attach"]["remember_choice"] is True
+
+
+def test_save_full_config_writes_dotconfig(tmp_path: Path) -> None:
+    (tmp_path / "config.example.json").write_bytes(_example_bytes())
+    data = json.loads(_example_bytes().decode("utf-8"))
+    data["keys"]["open_menu"] = "q"
+    save_full_config(tmp_path, data)
+    loaded = json.loads((tmp_path / ".config").read_text(encoding="utf-8"))
+    assert loaded["keys"]["open_menu"] == "q"
+    cfg = load_app_config(tmp_path)
+    assert cfg["keys"]["open_menu"] == "q"
+
+
+def test_validate_config_dict_rejects_invalid() -> None:
+    data = json.loads(_example_bytes().decode("utf-8"))
+    data["keys"]["open_menu"] = "xx"
+    with pytest.raises(ValueError, match="open_menu"):
+        validate_config_dict(data)
 
 
 def test_keys_must_be_single_character(tmp_path: Path) -> None:

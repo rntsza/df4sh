@@ -1,13 +1,19 @@
 from __future__ import annotations
 
 import sys
+from collections.abc import Callable
 from typing import Any
 
 from df4sh.config import save_config_patch
 from df4sh.picker import pick_hwnd_interactive
 
 
-def resolve_target_hwnd(cfg: dict[str, Any], repo_root: Any) -> tuple[int, str]:
+def resolve_target_hwnd(
+    cfg: dict[str, Any],
+    repo_root: Any,
+    *,
+    pick_windows: Callable[[list[tuple[int, str]]], int | None] | None = None,
+) -> tuple[int, str]:
     if sys.platform != "win32":
         raise RuntimeError("attach requires win32")
     from df4sh import win32_windows as w32
@@ -25,7 +31,10 @@ def resolve_target_hwnd(cfg: dict[str, Any], repo_root: Any) -> tuple[int, str]:
     def pick_from(items: list[tuple[int, str]]) -> tuple[int, str]:
         if len(items) == 1:
             return items[0]
-        hwnd = pick_hwnd_interactive(items)
+        if pick_windows is not None:
+            hwnd = pick_windows(items)
+        else:
+            hwnd = pick_hwnd_interactive(items)
         if hwnd is None:
             raise RuntimeError("no window selected")
         title = next(t for h, t in items if h == hwnd)

@@ -21,6 +21,16 @@ pip install -e ".[dev]"
 - Optional: create `.config` in the repository root with the same JSON shape to override defaults. The `.config` file is gitignored.
 - When the package is installed globally (`site-packages`), run `python -m df4sh` from the repository directory so discovery walks upward from the current working directory and finds `config.example.json`. Alternatively set `DF4SH_REPO_ROOT` to that directory. For development, run `pip install -e .` from the clone so imports use this repository (if you previously ran `pip install .` without `-e`, run `pip install -e .` again to replace the fixed copy under `site-packages`).
 
+## Desktop UI (Windows)
+
+```text
+python -m df4sh gui
+```
+
+- **`Parado` / `Pesca em execução`** status, **`Iniciar pesca`** / **`Parar`**, log das mesmas linhas `state=` que o modo consola.
+- Editor **JSON** da configuração com **`Recarregar do disco`** e **`Guardar configuração`** (valida e grava **`.config`**). **`Iniciar`** usa sempre o ficheiro em disco após **`load_app_config`** — grava antes se editaste o texto.
+- Seleção de janela ambígua abre um **`Toplevel`** (sem segundo `Tk()` raiz).
+
 ## Run
 
 ```text
