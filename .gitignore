@@ -3,3 +3,5 @@
 # /dist/
 *.spec.bak
 .doc
+/doc/
+doc
