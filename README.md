@@ -31,6 +31,11 @@ python -m df4sh gui
 - Editor **JSON** da configuração com **`Recarregar do disco`** e **`Guardar configuração`** (valida e grava **`.config`**). **`Iniciar`** usa sempre o ficheiro em disco após **`load_app_config`** — grava antes se editaste o texto.
 - Seleção de janela ambígua abre um **`Toplevel`** (sem segundo `Tk()` raiz).
 
+## Video
+
+- `Youtube`: 
+[![Watch the video](https://img.youtube.com/vi/4zHR0ekWw7g/default.jpg)](https://www.youtube.com/watch?v=4zHR0ekWw7g)
+
 ## Run
 
 ```text
