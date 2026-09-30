@@ -3,9 +3,12 @@ pyproject.toml
 src/df4sh/__init__.py
 src/df4sh/__main__.py
 src/df4sh/attach.py
+src/df4sh/automation.py
 src/df4sh/capture.py
 src/df4sh/config.py
+src/df4sh/desktop_ui.py
 src/df4sh/geometry.py
+src/df4sh/input_win32.py
 src/df4sh/picker.py
 src/df4sh/vision.py
 src/df4sh/win32_windows.py
@@ -15,6 +18,7 @@ src/df4sh.egg-info/dependency_links.txt
 src/df4sh.egg-info/requires.txt
 src/df4sh.egg-info/top_level.txt
 tests/test_attach_non_windows.py
+tests/test_automation_non_windows.py
 tests/test_capture_frame.py
 tests/test_config.py
 tests/test_geometry.py

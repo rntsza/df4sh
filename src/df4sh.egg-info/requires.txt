@@ -4,5 +4,8 @@ numpy>=1.26
 psutil>=5.9
 opencv-python-headless>=4.8
 
+[bundle]
+pyinstaller>=6
+
 [dev]
 pytest>=8

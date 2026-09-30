@@ -81,6 +81,8 @@ def _cmd_gui(repo: Path) -> None:
 
 def main() -> None:
     try:
+        if getattr(sys, "frozen", False) and len(sys.argv) == 1:
+            sys.argv.append("gui")
         parser = argparse.ArgumentParser(prog="df4sh")
         sub = parser.add_subparsers(dest="cmd")
         sub.add_parser("probe")

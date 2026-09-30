@@ -11,6 +11,8 @@ Requires-Dist: psutil>=5.9
 Requires-Dist: opencv-python-headless>=4.8
 Provides-Extra: dev
 Requires-Dist: pytest>=8; extra == "dev"
+Provides-Extra: bundle
+Requires-Dist: pyinstaller>=6; extra == "bundle"
 
 # df4sh
 
@@ -35,6 +37,16 @@ pip install -e ".[dev]"
 - Optional: create `.config` in the repository root with the same JSON shape to override defaults. The `.config` file is gitignored.
 - When the package is installed globally (`site-packages`), run `python -m df4sh` from the repository directory so discovery walks upward from the current working directory and finds `config.example.json`. Alternatively set `DF4SH_REPO_ROOT` to that directory. For development, run `pip install -e .` from the clone so imports use this repository (if you previously ran `pip install .` without `-e`, run `pip install -e .` again to replace the fixed copy under `site-packages`).
 
+## Desktop UI (Windows)
+
+```text
+python -m df4sh gui
+```
+
+- **`Parado` / `Pesca em execução`** status, **`Iniciar pesca`** / **`Parar`**, log das mesmas linhas `state=` que o modo consola.
+- Editor **JSON** da configuração com **`Recarregar do disco`** e **`Guardar configuração`** (valida e grava **`.config`**). **`Iniciar`** usa sempre o ficheiro em disco após **`load_app_config`** — grava antes se editaste o texto.
+- Seleção de janela ambígua abre um **`Toplevel`** (sem segundo `Tk()` raiz).
+
 ## Run
 
 ```text
@@ -46,6 +58,17 @@ Run tests:
 ```text
 pytest tests/
 ```
+
+## Executable (Windows, PyInstaller)
+
+From the repository root:
+
+```text
+pip install ".[bundle]"
+python -m PyInstaller df4sh.spec --noconfirm
+```
+
+Output: `dist/df4sh.exe`. For frozen executables, place `.config` and template PNGs **next to** `df4sh.exe` if you want to override the embedded copy; see `doc/r14-pyinstaller-exe.md`.
 
 ## Phase 2 behavior
 
@@ -59,7 +82,21 @@ pytest tests/
 ## Phase 3 behavior
 
 - Template paths `templates.epesca1_path` / `templates.epesca2_path` are resolved relative to the repository root. Images are loaded with OpenCV (`cv2.IMREAD_COLOR`, **BGR** `uint8`) and cached in memory for the process lifetime.
-- Matching uses **`cv2.matchTemplate`** with **`cv2.TM_CCOEFF_NORMED`**. Scores are compared to **`vision.match_threshold_epesca1`** and **`vision.match_threshold_epesca2`** (configurable).
+- Matching uses grayscale **multi-scale** `matchTemplate` (**`TM_CCOEFF_NORMED`**) for **`match_epesca1`** and **`match_epesca2`** when **`vision.epesca1_multiscale`** / **`vision.epesca2_multiscale`** are **true** (defaults). Set either to **false** to use single-scale BGR on that template only. Scores are compared to **`vision.match_threshold_epesca1`** and **`vision.match_threshold_epesca2`**.
+- **`match_epesca1`** returns six values internally (**`matched`**, **`score`**, **`x`**, **`y`**, **`tw`**, **`th`**): **`tw`/`th`** are the winning scaled template size in pixels (used for the radial-menu click center). **`python -m df4sh probe`** prints them as **`tw=`** / **`th=`**. **`match_epesca2`** still reports four values to stdout in **`run`** logs.
 - Optional **`vision.epesca1_search_roi`** / **`vision.epesca2_search_roi`**: each is `null` or an object with **`x`**, **`y`**, **`width`**, **`height`** in **normalized 0..1** coordinates relative to the frame (`null` = search the full frame). Best-match **`x`,`y`** printed by the CLI are the top-left of the template in **full-frame** coordinates.
 - Dependency: **`opencv-python-headless`** (no OpenCV GUI required). Automated vision tests are optional in this phase; use **`python -m df4sh`** for a smoke run when template PNGs are present.
+
+## Phase 4 behavior
+
+- **`python -m df4sh`** (no subcommand) and **`python -m df4sh probe`** run the same **one-shot** check: attach, one frame, template scores (unchanged from earlier phases).
+- **`python -m df4sh run`** starts the **fishing loop** on Windows: focus target HWND (`SetForegroundWindow` + optional `AttachThreadInput`), send **`keys.open_menu`** and **`keys.hook`** via **`SendInput`** using **hardware scan codes** derived from `VkKeyScan` / `MapVirtualKey` (`KEYEVENTF_SCANCODE` — many games ignore `KEYEVENTF_UNICODE`); a short settle delay runs after focus before each tap.
+- **Radial / menu:** optional **`keys.select_fishing`** (one character or empty): if set, that key is sent after **`timing.delay_after_menu_ms`** (e.g. a confirm key). **`timing.after_select_fishing_ms`** waits before vision polling.
+- **Choosing fishing in the wheel:** when **`match_epesca1`** first succeeds, if **`automation.mouse_click_epesca1_center`** is **true** (default), the tool performs a **left click** at the **center** of the matched template in **screen** coordinates (hook+fish icon crop, e.g. **`fish1E.png`**). Then **`automation.after_epesca1_click_ms`** delays before the **`wait_epesca2`** phase. Set **`mouse_click_epesca1_center`** to **false** if you rely only on keyboard.
+- Keys **`open_menu`**, optional **`select_fishing`**, and **`hook`** use the single-character rule (trimmed); **`hook`** remains required non-empty.
+- During **`wait_epesca2`**, the loop uses **`timing.poll_interval_epesca2_ms`** if set (else **`timing.poll_interval_ms`**). **`capture.epesca2_target_fps`** may be **`null`**: then there is **no FPS cap** for that phase (only the poll interval sleeps); if omitted, **`capture.target_fps`** applies; if set to an integer, allowed range is **1–120**.
+- **`vision.epesca2_multiscale_fast`:** when **true**, **`match_epesca2`** uses **every other** step of the full multiscale list (same numeric range, fewer `matchTemplate` calls). If scores sit **just below** **`match_threshold_epesca2`**, turn **fast** off or lower the threshold slightly. Example defaults **`epesca2_multiscale_fast`** to **false** for reliability.
+- When **`match_epesca2`** succeeds, **`SendInput`** for **`keys.hook`** runs **before** the **`state=wait_epesca2 matched=True`** line so stdout does not delay input. **`automation.hook_refocus`** (default **true** in merged defaults; example **false** for minimum latency) controls **`SetForegroundWindow`** before the hook. **`automation.hook_reaction_ms`** sleeps that many milliseconds after refocus when **`hook_refocus`** ran.
+- Default example uses **`templates.epesca1_path`:** `fish1E.png` and **`templates.epesca2_path`:** `fishcatch1.png` (compact bite HUD crop). **`EPesca2.png`** remains in the repo if you prefer a larger template — set **`templates.epesca2_path`** accordingly and run **`probe`** to compare scores. Tune **`vision.match_threshold_epesca2`** if detection is intermittent (scores near the threshold). Hook key fires **inside** the `wait_epesca2` loop when the match passes.
+- Stdout logs include `state=wait_epesca1`, `state=click_epesca1`, `state=wait_epesca2`, and `state=hook sent`.
 

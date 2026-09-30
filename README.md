@@ -43,6 +43,17 @@ Run tests:
 pytest tests/
 ```
 
+## Executable (Windows, PyInstaller)
+
+From the repository root:
+
+```text
+pip install ".[bundle]"
+python -m PyInstaller df4sh.spec --noconfirm
+```
+
+Output: `dist/df4sh.exe`. Double-click opens **gui** (no args); use `df4sh.exe probe` / `run` / `gui` from a shell if needed. Place `.config` and template PNGs **next to** `df4sh.exe` to override the embedded copy; see `doc/r14-pyinstaller-exe.md`.
+
 ## Phase 2 behavior
 
 - Window attachment runs only on Windows (`sys.platform == "win32"`). On other platforms, `resolve_target_hwnd` raises `RuntimeError` mentioning `win32`.

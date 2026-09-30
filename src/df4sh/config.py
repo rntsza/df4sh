@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from copy import deepcopy
 from pathlib import Path
 from typing import Any
@@ -59,6 +60,18 @@ def _has_config_at(directory: Path) -> bool:
     return (directory / CONFIG_EXAMPLE_NAME).is_file() or (directory / CONFIG_USER_NAME).is_file()
 
 
+def _resolve_frozen_bundle_root() -> Path | None:
+    if not getattr(sys, "frozen", False):
+        return None
+    exe_dir = Path(sys.executable).resolve().parent
+    if _has_config_at(exe_dir):
+        return exe_dir
+    meipass = getattr(sys, "_MEIPASS", None)
+    if meipass and _has_config_at(Path(meipass)):
+        return Path(meipass)
+    return None
+
+
 def resolve_repo_root() -> Path:
     raw = os.environ.get("DF4SH_REPO_ROOT")
     if raw:
@@ -68,6 +81,9 @@ def resolve_repo_root() -> Path:
         raise FileNotFoundError(
             f"DF4SH_REPO_ROOT={raw!r}: missing {CONFIG_EXAMPLE_NAME} and {CONFIG_USER_NAME}"
         )
+    frozen_root = _resolve_frozen_bundle_root()
+    if frozen_root is not None:
+        return frozen_root
     cwd = Path.cwd().resolve()
     for d in [cwd, *cwd.parents]:
         if _has_config_at(d):

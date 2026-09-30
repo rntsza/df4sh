@@ -30,6 +30,7 @@ class FishingDesktopApp:
         self._build()
 
     def _build(self) -> None:
+        self.master.title("DF4SH - Diablo IV Fishing Assistant")
         self.master.geometry("860x720")
         self.master.minsize(640, 480)
 
@@ -51,7 +52,7 @@ class FishingDesktopApp:
 
         hint = ttk.Label(
             self.master,
-            text="Iniciar usa o ficheiro .config (ou exemplo) no disco — guarda o JSON abaixo antes, se o editaste.",
+            text="As configurações são guardadas em no arquivo .config — Você sempre pode editar o JSON abaixo antes de salvar ou usar o arquivo de exemplo.",
             font=("", 8),
         )
         hint.pack(anchor=tk.W, padx=8, pady=(4, 0))
@@ -68,10 +69,10 @@ class FishingDesktopApp:
 
         cfg_btns = ttk.Frame(self.master, padding=(8, 0))
         cfg_btns.pack(fill=tk.X, pady=(0, 8))
-        ttk.Button(cfg_btns, text="Recarregar do disco", command=self._reload_config_text).pack(
+        ttk.Button(cfg_btns, text="Recarregar do arquivo", command=self._reload_config_text).pack(
             side=tk.LEFT, padx=(0, 8)
         )
-        ttk.Button(cfg_btns, text="Guardar configuração", command=self._save_config_text).pack(
+        ttk.Button(cfg_btns, text="Salvar configuração", command=self._save_config_text).pack(
             side=tk.LEFT
         )
 
@@ -127,7 +128,7 @@ class FishingDesktopApp:
         self.btn_stop.configure(state=tk.DISABLED)
 
     def _set_running_ui(self) -> None:
-        self.lbl_status.configure(text="Pesca em execução")
+        self.lbl_status.configure(text="Pescando")
         self.btn_start.configure(state=tk.DISABLED)
         self.btn_stop.configure(state=tk.NORMAL)
 
