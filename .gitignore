@@ -1,4 +1,5 @@
 .config
 /build/
-/dist/
+# /dist/
 *.spec.bak
+.doc
